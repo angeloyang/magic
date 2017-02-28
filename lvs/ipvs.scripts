@@ -1,0 +1,193 @@
+centos6: modprobe -l | grep ipvs
+centos7: modprobe -c | grep ipvs
+
+#########################################install#########################################
+# ipvsadm.i386 : Utility to administer the Linux Virtual Server
+yum -y install ipvsadm
+# Load balancer and high availability service
+yum -y install keepalived
+
+
+# 
+keepalived -D
+lsmod | grep ip_vs 
+tail -f /var/log/messages
+ip addr
+
+#########################################ipvsadm#########################################
+#VIP: 192.168.3.220
+#Real Server:
+#	192.168.3.100
+#	192.168.3.79
+
+# 192.168.3.100
+ipvsadm -A -t 192.168.3.220:80 -s rr
+ipvsadm -a -t 192.168.3.220:80 -r 192.168.3.100:80 -g
+ipvsadm -a -t 192.168.3.220:80 -r 192.168.3.79:80 -g
+ipvsadm -ln
+
+# ipvsadm --clear
+
+ipvsadm --list  --stats -n
+
+ifconfig eth1:0 192.168.3.220
+
+
+# 192.168.3.79
+scp root@192.168.3.100:~/lvs_real.sh .
+ifconfig lo:220 192.168.3.220 broadcast 192.168.3.220 netmask 255.255.255.255 up
+
+
+# del ip address
+ip addr del 192.168.3.220 dev lo
+
+
+#########################################firewall#########################################
+iptables --insert INPUT 1 --protocol tcp --destination-port 80 -j ACCEPT 
+
+curl http://192.168.3.220/test.html
+
+systemctl status firewalld.service 
+systemctl start firewalld.service 
+
+#########################################testing#########################################
+tcpdump -i any -n port 80
+tcpdump -evvvnn host not 192.168.3.219 and \(port not 137 and port not 138 and port not 139 and port not bootpc and port not bootps\)
+
+
+# 192.168.3.79
+tcpdump -evvvnn \(host 192.168.3.79 or localhost or 192.168.3.220\) and \(port not 22 and port not 137 and port not 138 and port not 139 and port not bootpc and port not bootps\)
+
+# 192.168.3.100
+tcpdump -evvvnn \(host 192.168.3.100 or localhost or 192.168.3.220\) and \(port not 22 and port not 137 and port not 138 and port not 139 and port not bootpc and port not bootps\)
+
+# Ignore TCP Check
+
+192.168.3.79.80
+
+http://mixter.void.ru/rawip.html
+
+05:33:31.352944 08:00:27:03:60:a7(*******100*******) > 08:00:27:da:83:97(*******79*******), ethertype IPv4 (0x0800), length 74: (tos 0x0, ttl 64, id 39879, offset 0, flags [DF], proto TCP (6), length 60)
+    192.168.3.99.29242 > 192.168.3.220.80: Flags [S], cksum 0xce46 (correct), seq 854813302, win 5840, options [mss 1460,sackOK,TS val 3635671473 ecr 0,nop,wscale 7], length 0
+05:33:31.353014 08:00:27:da:83:97 > 00:1d:60:b4:cc:e3, ethertype IPv4 (0x0800), length 74: (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    192.168.3.220.80 > 192.168.3.99.29242: Flags [S.], cksum 0x88be (incorrect -> 0x45ea), seq 2255204621, ack 854813303, win 28960, options [mss 1460,sackOK,TS val 176483325 ecr 3635671473,nop,wscale 7], length 0
+05:33:31.353903 08:00:27:da:83:97 > 00:1d:60:b4:cc:e3(******99*******), ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 64, id 23280, offset 0, flags [DF], proto TCP (6), length 52)
+    192.168.3.220.80 > 192.168.3.99.29242: Flags [.], cksum 0x88b6 (incorrect -> 0xe444), seq 1, ack 165, win 235, options [nop,nop,TS val 176483326 ecr 3635671475], length 0
+
+#########################################prod#########################################
+DB: 
+	10.72.102.70	8521
+Firewall: 
+	10.72.102.94
+
+#########################################qa#########################################
+nmap -T4 -sP 192.168.1.0/24 && egrep "00:00:00:00:00:00" /proc/net/arp
+nmap -sP 192.168.1.100-200
+
+ifconfig eno16780032:0 192.168.1.140
+ip addr del 192.168.1.140 dev eno16780032:0
+
+VIP: 192.168.1.160
+MT:
+	192.168.1.130
+Keepalived:
+	192.168.1.130	master
+DB: 
+	192.168.1.130	1521
+Firewall: 
+	192.168.1.244	1522
+
+conn sas/ecwise@192.168.1.130:1521/sasdb
+conn sas/ecwise@192.168.1.244:1522/sasdb
+
+conn sas/ecwise@192.168.1.140:1521/sasdb
+
+conn sas/ecwise@192.168.1.130:1522/sasdb
+conn sas/ecwise@192.168.1.130:1521/sasdb
+disconn
+
+
+scp root@192.168.3.79:~/lvs_real.sh . 
+
+
+conn sas/ecwise@192.168.1.130:1521/sasdb
+conn sas/ecwise@192.168.1.85:1522/sasdb
+DISCONNECT
+
+
+conn sas/ecwise@192.168.1.244:1522/sasdb
+select sys_context('userenv','ip_address') from dual;
+select sys_context('userenv','CURRENT_SCHEMA') from dual;
+select sys_context('userenv','DB_DOMAIN') from dual;
+select sys_context('userenv','HOST') from dual;
+select sys_context('userenv','OS_USER') from dual;
+select sys_context('userenv','INSTANCE') from dual;
+
+select utl_inaddr.get_host_address from dual;
+
+# get client ip
+select terminal, machine from v$session where sid= sys_context('userenv', 'sid');
+
+# get server info
+conn system/ecwise@192.168.1.130:1521/sasdb
+conn system/ecwise@192.168.1.244:1522/sasdb
+
+select utl_inaddr.get_host_address, utl_inaddr.get_host_name from dual;
+select host_name from v$instance;
+select name,value from v$parameter where value like '/u01%';
+
+#ORACLE_SID
+show parameter instance_name
+show parameter db_name
+
+iptables --insert  INPUT 1 -p tcp --dport 1522 -j DROP
+#iptables --delete INPUT 1
+
+
+yum EPEL(Extra Packages for Enterprise Linux)
+centos7: wget wget http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+centos6: wget www.lishiming.net/data/attachment/forum/epel-release-6-8_64.noarch.rpm
+
+
+zsh
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
+
+
+================================================lvs-nat=============
+director:/etc/lvs# echo 0 > /proc/sys/net/ipv4/conf/all/send_redirects
+director:/etc/lvs# echo 0 > /proc/sys/net/ipv4/conf/default/send_redirects
+director:/etc/lvs# echo 0 > /proc/sys/net/ipv4/conf/eth0/send_redirects
+
+
+
+================================================lvs-tun=============
+modprobe -l | grep ipip
+modprobe ipip
+modprobe ip_gre
+modprobe ipv6
+
+ip tunnel add tun0 mode gre remote 192.168.3.79 local 192.168.3.100
+#ip tunnel del name tun0
+ip tunnel show               
+ip link set tun0 up
+ip addr add 10.0.0.1 peer 10.0.0.2 dev tun0
+ip route add 10.0.0.0/24 dev tun0
+iptables -F
+
+
+
+
+http://www.osboxes.org/centos/
+CentOS 6.8 / CentOS 7.1-1511
+Username: osboxes
+Password: osboxes.org
+Root Account Password: osboxes.org
+VB Guest Additions & VMware Tools: Not Installed
+
+
+NBT
+	使用令牌环和以太网传输的NetBIOS现在被称为NetBEUI。在Microsoft Windows 98发布之前，一直广泛使用。在TCP/IP上运行的NetBIOS称为NBT，由RFC 1001和RFC 1002定义。
+	NetBIOS和NetBEUI被设计为仅仅用于局域网，因此不支持路由，并且最多只能处理72个节点或者设备。NetBIOS和NetBEUI经常使用广播实现，尤其是名字服务的相关操作。
+
+difference between all and default in kernel settings
+	When you change variables in the /proc/sys/net/ipv4/conf/all directory, the variable for all interfaces and default will be changed as well. When you change variables in /proc/sys/net/ipv4/conf/default, all future interfaces will have the value you specify. This should only affect machines that can add interfaces at run time, such as laptops with PCMCIA cards, or machines that create new interfaces via VPNs or PPP, for example.

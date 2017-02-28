@@ -1,0 +1,15 @@
+鼠标选中多行，按下 Ctrl+Shift+L (Command+Shift+L) 即可同时编辑这些行
+鼠标选中文本，反复按 CTRL+D (Command+D) 即可继续向下同时选中下一个相同的文本进行同时编辑
+鼠标选中文本，按下 Alt+F3 (Win) 或 Ctrl+Command+G(Mac) 即可一次性选择全部的相同文本进行同时编辑； 
+Shift+鼠标右键 (Win) 或 Option+鼠标左键 (Mac) 或使用鼠标中键可以用鼠标进行竖向多行选择； 
+Ctrl+鼠标左键(Win) 或 Command+鼠标左键(Mac) 可以手动选择同时要编辑的多处文本 类似的技巧还有很多
+
+
+Ctrl+P
+@ 列出这文件里全部的 Function; 当你编辑的是HTML时，这货给你罗列的则是HTML的各个ID元素
+: 再输入一个数字，嗯，这次则可以跳到指定的行数了
+# 罗列/搜索文本
+
+Ctrl+R (Mac下是Command+R)，它完全等同于Ctrl+P之后输入@；跳转到指定行号是 Ctrl+G (Mac是Command+G)
+
+譬如我有一个名为”hello-iplaysoft.js”的文件，里面其中有一个function叫做”visit_iplaysoft_com”，我现在想要编辑这个函数，那么我只需按下 Ctrl+P，然后输入“heip@vi”回车（模糊匹配，注意前面有颜色的字符）
