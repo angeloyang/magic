@@ -1,0 +1,110 @@
+#!/bin/bash
+# chkconfig: 2345 90 10
+# description: amp-report-resource-service service restart scripts
+
+##################Need change##################
+
+SERVICE_NAME=amp-report-resource-service
+JAR_PATH="/usr/local/report_service"
+JAR_FILENAME=`ls -lt ${JAR_PATH}/lib | grep "amp-report-resource-service*.*jar" | head -n 1 | awk -F ' ' '{print $9}'`
+JAR_LOGFILE="${JAR_PATH}/logs/${SERVICE_NAME}.log"
+JAVA_HOME="/usr/java/jdk1.7.0_25"
+
+##################Need change##################
+
+function getServiceStatus {
+  JAR_STATUS=$(ps aux|grep $JAR_FILENAME |grep -v grep)
+  JAR_PID=$(ps -ef |grep $JAR_FILENAME |grep -v grep |awk '{print $2}')
+}
+
+function startServiceProcess {
+  cd $JAR_PATH || return 1
+  cmd="nohup $JAVA_HOME/bin/java -jar $JAR_PATH/lib/$JAR_FILENAME --spring.profiles.active=qa > /dev/null &"
+  su -m root -s $SHELL -c "$cmd" || return 1
+  sleep 0.5
+  getServiceStatus
+  if [ "$JAR_STATUS" == "" ]; then
+    echo -ne "\n$SERVICE_NAME started failed, see logfile $JAR_LOGFILE ."
+    return 1
+  fi
+  return 0;
+}  
+
+function stopServiceProcess {
+  getServiceStatus
+  kill -9 $JAR_PID
+  sleep 10 ; getServiceStatus
+  if [ "$JAR_STATUS" == "" ]; then
+    RETVAL=0; return 0; 
+  fi
+  return 1;  
+}
+
+function startService {
+  getServiceStatus
+  if [ "$JAR_STATUS" != "" ]; then
+    echo -ne "$SERVICE_NAME is already running\n"; 
+    RETVAL=0; return 0; 
+  else
+    startServiceProcess
+    echo -n "Starting $SERVICE_NAME ( PID: $JAR_PID )  "  
+    if [ $? -ne 0 ]; then RETVAL=1; echo "Failed"; return 1; fi
+    echo " [ OK ]"
+    RETVAL=0
+    return 0; 
+  fi
+  return 0; 
+}
+
+function stopService {
+  getServiceStatus
+  if [ "$JAR_STATUS" == "" ]; then
+    echo -n "$SERVICE_NAME is not running"; 
+    RETVAL=0; echo ""; return 0; 
+  else
+   echo -n "Stopping $SERVICE_NAME   "
+   stopServiceProcess
+   if [ $? -ne 0 ]; then RETVAL=1; echo "Failed"; return 1; fi
+   echo " [ OK ]"
+   RETVAL=0
+   return 0; 
+  fi
+  return 0; 
+}
+
+function checkServiceStatus {
+  getServiceStatus
+  if [ "$JAR_STATUS" != "" ]; then
+    echo "$SERVICE_NAME ( PID: $JAR_PID ) is running"
+    RETVAL=0
+  else
+    echo "$SERVICE_NAME is stopped"
+    RETVAL=3
+  fi
+  return 0; 
+}
+
+function main {
+  RETVAL=0
+  case "$1" in
+    start)                                               # starts the Java program as a Linux service
+       startService
+       ;;
+    stop)                                                # stops the Java program service
+       stopService
+       ;;
+    restart)                                             # stops and restarts the service
+       stopService && startService
+       ;;
+    status)                                              # displays the service status
+       checkServiceStatus
+       ;;
+    *)
+       echo "Usage: $0 {start|stop|restart|status}"
+       exit 1
+       ;;
+    esac
+  exit $RETVAL
+}
+
+main $1

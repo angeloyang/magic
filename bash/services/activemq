@@ -1,0 +1,31 @@
+#!/bin/bash  
+# description: Tomcat Start Stop Restart  
+# processname: tomcat  
+# chkconfig: 234 20 80   
+#ulimit -Hn 4096 
+#ulimit -Sn 4096
+
+JAVA_HOME=/usr/java/jdk1.6.0_33
+export JAVA_HOME   
+PATH=$JAVA_HOME/bin:$PATH   
+export PATH   
+CATALINA_HOME=/usr/local/apache-activemq-5.5.1
+  
+case $1 in  
+start)   
+cd $CATALINA_HOME/bin
+./activemq start   
+;;    
+stop)      
+cd $CATALINA_HOME/bin
+./activemq stop  
+;;    
+restart)   
+cd $CATALINA_HOME/bin
+./activemq stop
+./activemq start
+;;    
+
+esac       
+exit 0  
+

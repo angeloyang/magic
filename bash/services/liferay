@@ -1,0 +1,29 @@
+#!/bin/bash  
+# description: Tomcat Start Stop Restart  
+# processname: tomcat  
+# chkconfig: 234 20 80   
+ulimit -Hn 4096 
+ulimit -Sn 4096
+
+JAVA_HOME=/usr/java/jdk1.7.0_51
+export JAVA_HOME   
+PATH=$JAVA_HOME/bin:$PATH   
+export PATH   
+CATALINA_HOME=/usr/local/liferay/tomcat-7.0.23
+  
+case $1 in  
+start)   
+cd $CATALINA_HOME/bin
+sh ./startup.sh   
+;;    
+stop)      
+sh $CATALINA_HOME/bin/shutdown.sh   
+;;    
+restart)   
+cd $CATALINA_HOME/bin
+sh ./shutdown.sh   
+sh ./startup.sh   
+;;    
+esac       
+exit 0  
+
